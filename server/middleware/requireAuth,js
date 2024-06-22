@@ -1,0 +1,27 @@
+const jwt = require(`jsonwebtoken`)
+const User = require('../models/user')
+//este middleware checa el navegador y la cookie
+
+async function requireAuth(req, res, next) {
+    try {
+        //leer/extraer el token de la cookie
+        const token = req.cookies.Authorization; //quien hace solicitudes tiene una cookie y se llama Authorization
+        //decodificar el token
+        const decoded = jwt.verify(token, process.env.SECRET);//CON LA VARIABLE DE AMBIENTE
+        //verificar expiracion
+        if (Date.now() > decoded.exp) return res.sendStatus(401);//por si ya expiro
+        //encontrar usuairo usando lo de codificado el sub
+        const user = await User.findById(decoded.sub);
+        if (!user) return res.sendStatus(401);
+        //adjuntar user ala solicitud
+        req.user = user; //req no tiene user, se le adjunto y se le pega el user que acabamos de encontrar
+
+        //continuar
+        next();
+    } catch (err) {
+        return res.sendStatus(401);
+    }
+    
+}
+
+module.exports = requireAuth;
